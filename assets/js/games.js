@@ -41,7 +41,7 @@ window.addEventListener('load', () => {
             canvasCtl.showOnlyCanvas('placeholder');
         },
         showGame: (gameType) => {
-            stopGame(); // Para qualquer jogo em execução e mostra placeholder
+            gamesCtl.stopGame(); // Para qualquer jogo em execução e mostra placeholder
             buttonsCtl.resetButtonStyles();
             // Mostra apenas o canvas do jogo selecionado
             canvasCtl.showOnlyCanvas(gameType);
@@ -128,7 +128,7 @@ window.addEventListener('load', () => {
         });
         window.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
-                stopGame();
+                gamesCtl.stopGame();
                 buttonsCtl.resetButtonStyles();
             }
         });
