@@ -1,31 +1,85 @@
-
 class SnakeGame {
-    #canvas
-    #ctx
-    #grid
-    #snake
-    #apple
-    #dir
-    #nextDir
-    #score
-    #record
-    #alive
-    #lastFrameTime = 0
-    #tileSize = 20
-    #boundLoop
-
-  constructor(canvas) {
-    this.#canvas = canvas
-    this.#ctx = canvas.getContext("2d")
-    this.#grid = {
-      width: canvas.width,
-      height: canvas.height,
-      count: canvas.width / this.#tileSize
+  #dirMap = {
+    ArrowUp: { x: 0, y: -1 },
+    ArrowDown: { x: 0, y: 1 },
+    ArrowLeft: { x: -1, y: 0 },
+    ArrowRight: { x: 1, y: 0 }
+  }
+  #canvas
+  #ctx
+  #grid
+  #snake
+  #apple
+  #dir
+  #nextDir
+  #score = {
+    player: 0,
+    computer: 0
+  };
+  #recordElement = document.getElementById('record');
+  #recordKey = 'snakeRecord';
+  #record = {
+    save : () => {
+      const currentRecord = localStorage.getItem(this.#recordKey) || '0';
+      if (this.#score.player > parseInt(currentRecord, 10)) {
+        localStorage.setItem(this.#recordKey, this.#score.player);
+        this.#recordElement.textContent = this.#score.player;
+      }
+    },
+    load : () => {
+      const record = localStorage.getItem(this.#recordKey);
+      this.#recordElement.textContent = record || '0';
     }
-    this.#record = parseInt(localStorage.getItem("snakeRecord")) || 0
-    this.#boundLoop = this.#loop.bind(this)
-    this.#setupControls()
-    this.reset()
+  }; // Record score, not used in this implementation
+  #alive
+  #boundLoop
+  #startX = 0
+  #startY = 0
+  #tileSize = 20
+  #lastFrameTime = 0
+  #animFrameId = null
+  #removeControls = null
+  #recordKey = 'snakeRecord'
+
+  constructor(){}
+
+  // Public method to start the game
+  // This method initializes the game with a canvas and grid count,
+  // and sets up the game loop and controls. Allows lazy initialization
+  // of the game state, so it can be called multiple times without
+  // needing to reset the game. If the game is already running, it will reset the game state.
+  /**
+   * Initializes the game with the specified canvas and grid count.
+   * @param {string} canvasId - The ID of the canvas element to render the game.
+   * @param {number} gridCount - The number of tiles in the grid (default is 20).
+   */
+  start(canvasId, gridCount = 20) {
+    this.#canvas = document.getElementById(canvasId);
+    if (!this.#canvas) {
+      throw new Error(`Canvas with id ${canvasId} not found`);
+    }
+    this.#canvas.classList.add('active'); // Garante que o canvas está visível
+    this.#ctx = this.#canvas.getContext("2d");
+    this.#grid = { count: gridCount };
+    this.#tileSize = Math.floor(this.#canvas.width / gridCount);
+    // Atualiza painel
+    this.#score = 0;
+    this.#record = parseInt(localStorage.getItem('snakeRecord') || '0', 10);
+    document.getElementById('score').textContent = this.#score;
+    document.getElementById('record').textContent = this.#record;
+    // Remove listeners antigos
+    this.#removeControls && this.#removeControls();
+    // Initialize game state
+    this.reset();
+    // Bind the game loop
+    this.#boundLoop = this.#loop.bind(this);
+    // Setup controls
+    this.#removeControls = this.#setupControls();
+    // Start the game loop
+    if (this.#alive) {
+      if (this.#animFrameId) cancelAnimationFrame(this.#animFrameId);
+      this.#animFrameId = requestAnimationFrame(this.#boundLoop);
+    }
   }
 
   reset() {
@@ -40,13 +94,66 @@ class SnakeGame {
     requestAnimationFrame(this.#boundLoop)
   }
 
+  // Public method to spawn an apple
+  // This can be called externally to reset the apple position
+  spawnApple() {
+    if (!this.#alive) return
+    if (this.#apple) {
+      this.#apple = null
+    }
+    this.#spawnApple()
+  }
+
+  // Private method to handle apple spawning logic
   #spawnApple() {
+    // Ensure apple is not already spawned
+    if (this.#apple && this.#alive) {
+      return
+    }
+
+    // Reset apple if the game is not alive
+    if (!this.#apple) {
+      this.#apple = { x: 0, y: 0 }
+    }
+
+    // Ensure apple does not spawn on the snake
+    this.#apple = null
+    if (!this.#alive) return
+    if (!this.#apple) {
+      this.#apple = { x: 0, y: 0 }
+    }
+
+    // Randomly place apple on the grid
+    this.#apple = {
+      x: Math.floor(Math.random() * this.#grid.count),
+      y: Math.floor(Math.random() * this.#grid.count)
+    }
+
+    // Ensure apple does not spawn on the snake
+    if (this.#snake.some(s => s.x === this.#apple.x && s.y === this.#apple.y)) {
+      this.#spawnApple()
+    }
+
+    // Ensure apple is not placed outside the grid
+    if (this.#apple.x < 0 || this.#apple.y < 0 || 
+        this.#apple.x >= this.#grid.count || this.#apple.y >= this.#grid.count) {
+      this.#spawnApple()
+    }
+
     do {
       this.#apple = {
-        x: Math.floor(Math.random() * this.#grid.count),
-        y: Math.floor(Math.random() * this.#grid.count)
+        x: Math.floor(Math.random() * (this.#grid.count - 1)),
+        y: Math.floor(Math.random() * (this.#grid.count - 1))
       }
     } while (this.#snake.some(s => s.x === this.#apple.x && s.y === this.#apple.y))
+
+    // Ensure apple is not placed outside the grid
+    if (this.#apple.x < 0 || this.#apple.y < 0 || 
+        this.#apple.x >= this.#grid.count || this.#apple.y >= this.#grid.count) {
+      this.#spawnApple()
+    }
+    this.#ctx.fillStyle = "#f00"
+    this.#ctx.fillRect(this.#apple.x * this.#tileSize, this.#apple.y * this.#tileSize, this.#tileSize, this.#tileSize)
   }
 
   #loop(time) {
@@ -89,8 +196,8 @@ class SnakeGame {
         localStorage.setItem("snakeRecord", this.#record)
         document.getElementById("record").textContent = this.#record
       }
-      this.#spawnApple()
       new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg").play()
+      this.#spawnApple()
     } else {
       this.#snake.pop()
     }
@@ -109,44 +216,70 @@ class SnakeGame {
     this.#ctx.fillRect(this.#apple.x * this.#tileSize, this.#apple.y * this.#tileSize, this.#tileSize, this.#tileSize)
   }
 
-  #setupControls() {
-    window.addEventListener("keydown", (e) => {
-      const dirMap = {
-        ArrowUp: { x: 0, y: -1 },
-        ArrowDown: { x: 0, y: 1 },
-        ArrowLeft: { x: -1, y: 0 },
-        ArrowRight: { x: 1, y: 0 }
+  #arrowKeyHandler(e) {
+    if (this.#alive && this.#dirMap[e.key]) {
+      const newDir = this.#dirMap[e.key]
+      // Prevent 180-degree turn
+      if (newDir.x !== -this.#dir.x || newDir.y !== -this.#dir.y) {
+        this.#nextDir = newDir
       }
-      const d = dirMap[e.key]
-      if (d && (d.x !== -this.#dir.x || d.y !== -this.#dir.y)) {
-        this.#nextDir = d
-      }
-    })
+    }
+  }
 
-    // Touch control
-    let startX = 0, startY = 0
-    window.addEventListener("touchstart", e => {
-      startX = e.touches[0].clientX
-      startY = e.touches[0].clientY
-    })
-    window.addEventListener("touchmove", e => {
-      const dx = e.touches[0].clientX - startX
-      const dy = e.touches[0].clientY - startY
+  #touchHandler(e) {
+    const touch = e.touches[0]
+    const dx = touch.clientX - this.#canvas.offsetLeft
+    const dy = touch.clientY - this.#canvas.offsetTop
+    const gridX = Math.floor(dx / this.#tileSize)
+    const gridY = Math.floor(dy / this.#tileSize)
+
+    if (gridX < 0 || gridY < 0 || gridX >= this.#grid.count || gridY >= this.#grid.count) return
+
+    // Determine direction based on touch position
+    if (Math.abs(dx) > Math.abs(dy)) {
+      this.#nextDir = dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 }
+    } else {
+      this.#nextDir = dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 }
+    }
+  }
+
+  #touchStartHandler(e) {
+    const touch = e.touches[0]
+    this.#startX = touch.clientX
+    this.#startY = touch.clientY
+  }
+
+  #setupControls() {
+    const keyHandler = this.#arrowKeyHandler.bind(this);
+    const touchStartHandler = e => {
+      this.#startX = e.touches[0].clientX;
+      this.#startY = e.touches[0].clientY;
+    };
+    const touchMoveHandler = e => {
+      const dx = e.touches[0].clientX - this.#startX;
+      const dy = e.touches[0].clientY - this.#startY;
       if (Math.abs(dx) > Math.abs(dy)) {
-        this.#nextDir = dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 }
+        this.#nextDir = dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 };
       } else {
-        this.#nextDir = dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 }
+        this.#nextDir = dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
       }
-      startX = startY = 0 // prevent multi-move
-    })
+      this.#startX = this.#startY = 0;
+    };
+    window.addEventListener("keydown", keyHandler);
+    window.addEventListener("touchstart", touchStartHandler);
+    window.addEventListener("touchmove", touchMoveHandler);
+    // Função para remover listeners
+    return () => {
+      window.removeEventListener("keydown", keyHandler);
+      window.removeEventListener("touchstart", touchStartHandler);
+      window.removeEventListener("touchmove", touchMoveHandler);
+    };
   }
 
   stop() {
-    this.#alive = false
-    window.removeEventListener("keydown", this.#setupControls)
-    window.removeEventListener("touchstart", this.#setupControls)
-    window.removeEventListener("touchmove", this.#setupControls)
-    cancelAnimationFrame(this.#boundLoop)
+    this.#alive = false;
+    if (this.#removeControls) this.#removeControls();
+    if (this.#animFrameId) cancelAnimationFrame(this.#animFrameId);
   }
   start() {
     if (!this.#alive) {
@@ -175,4 +308,13 @@ class SnakeGame {
   isRunning() {
     return this.#alive;
   }
+
+  get recordKey() {
+    return this.#recordKey;
+  }
+  
+  record = {
+    save: this.#record.save,
+    load: this.#record.load
+  };
 }

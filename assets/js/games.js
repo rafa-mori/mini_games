@@ -4,61 +4,65 @@ window.addEventListener('load', () => {
     const pongCanvas = document.getElementById('pong');
     const snakeCanvas = document.getElementById('snake');
     const tttCanvas = document.getElementById('tictactoe');
-    const placeholderCanvas = document.getElementById('placeholder');
     
     const gamesMap = {
-        pong:() => {
-            game = new PongGame(document.getElementById("pong"));
-            document.getElementById("record").textContent = localStorage.getItem("pongRecord") || "0";
-            document.getElementById("restart").onclick = () => {
-                document.getElementById("score").textContent = "0";
+        pong: () => {
+            game = new PongGame();
+            game.start('pong');
+            document.getElementById('record').textContent = localStorage.getItem('pongRecord') || '0';
+            document.getElementById('restart').onclick = () => {
+                document.getElementById('score').textContent = '0';
                 game.reset();
+            };
+            document.getElementById('start').onclick = () => {
+                game.start('pong');
+            };
+            document.getElementById('stop').onclick = () => {
+                game.stop();
+            };
+            // Dificuldade
+            const diffSelect = document.getElementById('pong-difficulty');
+            if (diffSelect) {
+                diffSelect.onchange = (e) => {
+                    game.setDifficulty(e.target.value);
+                };
+                // Aplica a dificuldade inicial
+                game.setDifficulty(diffSelect.value);
             }
         },
         snake: () => {
-            game = new SnakeGame(document.getElementById("snake"));
-            document.getElementById("record").textContent = localStorage.getItem("snakeRecord") || "0";
-            document.getElementById("restart").onclick = () => {
-                document.getElementById("score").textContent = "0";
+            game = new SnakeGame();
+            game.start('snake');
+            document.getElementById('record').textContent = game.record.load();
+            document.getElementById('restart').onclick = () => {
+                document.getElementById('score').textContent = '0';
                 game.reset();
-            }
+            };
         },
-        tttGame: () => {
-            game = new TicTacToe(document.getElementById("tictactoe"));
-            document.getElementById("record").textContent = localStorage.getItem("tttRecord") || "0";
-            document.getElementById("restart").onclick = () => {
+        tictactoe: () => {
+            game = new TicTacToe(document.getElementById('tictactoe'));
+            document.getElementById('record').textContent = game.record.load();
+            document.getElementById('restart').onclick = () => {
                 game.reset();
-            }
+            };
         }
     };
     const gamesCtl = {
         stopGame: () => {
-            if (game) {
+            if (game && typeof game.stop === 'function') {
                 game.stop();
                 game = null;
             }
-            // Mostra placeholder
-            canvasCtl.showOnlyCanvas('placeholder');
+            // Esconde todos os canvases
+            canvasCtl.showOnlyCanvas(null);
         },
         showGame: (gameType) => {
-            gamesCtl.stopGame(); // Para qualquer jogo em execução e mostra placeholder
+            gamesCtl.stopGame();
             buttonsCtl.resetButtonStyles();
             // Mostra apenas o canvas do jogo selecionado
             canvasCtl.showOnlyCanvas(gameType);
-            switch (gameType) {
-                case 'pong':
-                    gamesMap.pong();
-                    break;
-                case 'snake':
-                    gamesMap.snake();
-                    break;
-                case 'tictactoe':
-                    gamesMap.tttGame();
-                    break;
-                default:
-                    canvasCtl.showOnlyCanvas('placeholder');
-                    console.error('Jogo desconhecido:', gameType);
-            }
+            gamesMap[gameType]?.();
+            buttonsCtl.highlightSelectedButton(gameType);
         }
     };
     const buttonsCtl = {
@@ -94,20 +98,25 @@ window.addEventListener('load', () => {
         }
     };
     const canvasCtl = {
-        showOnlyCanvas: (canvasId) =>{
+        showOnlyCanvas: (canvasId) => {
             const canvases = document.querySelectorAll('.game-canvas');
             canvases.forEach(canvas => {
-                if (canvas.id === canvasId) {
-                    canvas.classList.remove('hidden');
+                if (canvasId && canvas.id === canvasId) {
+                    canvas.classList.add('active');
                 } else {
-                    canvas.classList.add('hidden');
+                    canvas.classList.remove('active'); 
                 }
             });
         },
         resizeCanvas: (canvas) => {
-            const aspectRatio = 16 / 9;
-            const width = window.innerWidth * 0.8;
-            const height = width / aspectRatio;
+            if (!canvas) return;
+            const aspectRatio = 4 / 3;
+            let width = Math.min(window.innerWidth * 0.7, 800);
+            let height = width / aspectRatio;
+            if (height > window.innerHeight * 0.8) {
+                height = window.innerHeight * 0.8;
+                width = height * aspectRatio;
+            }
             canvas.width = width;
             canvas.height = height;
         }
@@ -124,7 +133,6 @@ window.addEventListener('load', () => {
             canvasCtl.resizeCanvas(pongCanvas);
             canvasCtl.resizeCanvas(snakeCanvas);
             canvasCtl.resizeCanvas(tttCanvas);
-            canvasCtl.resizeCanvas(placeholderCanvas);
         });
         window.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
@@ -135,14 +143,22 @@ window.addEventListener('load', () => {
         // Remove evento de clique fora dos jogos para não sumir o container
     };
 
-    canvasCtl.resizeCanvas(pongCanvas);
-    canvasCtl.resizeCanvas(snakeCanvas);
-    canvasCtl.resizeCanvas(tttCanvas);
-    canvasCtl.resizeCanvas(placeholderCanvas);
-
+    // Ajusta resize para todos os canvases, mesmo ocultos, ao carregar
+    function resizeAllCanvases() {
+        [pongCanvas, snakeCanvas, tttCanvas].forEach(canvas => {
+            if (canvas) {
+                canvas.style.display = 'block'; // Garante que o canvas não está hidden para calcular tamanho
+                canvasCtl.resizeCanvas(canvas);
+                if (!canvas.classList.contains('active')) {
+                    canvas.style.display = '';
+                }
+            }
+        });
+    }
+    resizeAllCanvases();
+    window.addEventListener('resize', resizeAllCanvases);
+    // Mostra nada por padrão
+    canvasCtl.showOnlyCanvas(null);
     setEventListeners();
-
-    // Mostra placeholder por padrão
-    canvasCtl.showOnlyCanvas('placeholder');
 });
 

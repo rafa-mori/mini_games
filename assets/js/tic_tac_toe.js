@@ -1,4 +1,3 @@
-
 class TicTacToe {
     #canvas;
     #ctx;
@@ -8,6 +7,25 @@ class TicTacToe {
     #current;
     #winner;
     #boundHandleClick;
+    #score = {
+        player: 0,
+        computer: 0
+    };
+    #recordElement = document.getElementById('record');
+    #recordKey = 'tttRecord';
+    #record = {
+        save : () => {
+        const currentRecord = localStorage.getItem(this.#recordKey) || '0';
+        if (this.#score.player > parseInt(currentRecord, 10)) {
+            localStorage.setItem(this.#recordKey, this.#score.player);
+            this.#recordElement.textContent = this.#score.player;
+        }
+        },
+        load : () => {
+        const record = localStorage.getItem(this.#recordKey);
+        this.#recordElement.textContent = record || '0';
+        }
+    }; // Record score, not used in this implementation
 
     constructor(canvas) {
         if (!(canvas instanceof HTMLCanvasElement)) {
@@ -20,6 +38,10 @@ class TicTacToe {
         this.#boundHandleClick = this.#handleClick.bind(this);
         this.#canvas.addEventListener('click', this.#boundHandleClick);
         this.#init();
+        // Atualiza painel
+        this.#recordElement = document.getElementById('record');
+        this.#score = { player: 0, computer: 0 };
+        this.#updatePanel();
     }
 
     #init() {
@@ -27,6 +49,7 @@ class TicTacToe {
         this.#current = 'X';
         this.#winner = null;
         this.#draw();
+        this.#updatePanel();
     }
 
     #handleClick(e) {
@@ -40,12 +63,19 @@ class TicTacToe {
             this.#board[row][col] = this.#current;
             if (this.#checkWinner()) {
                 this.#winner = this.#current;
+                if (this.#current === 'X') {
+                    this.#score.player++;
+                } else {
+                    this.#score.computer++;
+                }
+                this.#record.save();
             } else if (this.#isDraw()) {
                 this.#winner = 'draw';
             } else {
                 this.#current = this.#current === 'X' ? 'O' : 'X';
             }
             this.#draw();
+            this.#updatePanel();
         }
     }
 
@@ -102,6 +132,11 @@ class TicTacToe {
         }
     }
 
+    #updatePanel() {
+        document.getElementById('score').textContent = this.#score.player;
+        this.#record.load();
+    }
+
     start() {
         this.#init();
     }
@@ -117,5 +152,15 @@ class TicTacToe {
 
     reset() {
         this.#init();
+        this.#updatePanel();
     }
+
+    get recordKey() {
+        return this.#recordKey;
+    }
+
+    record = {
+        save: this.#record.save,
+        load: this.#record.load
+    };
 }

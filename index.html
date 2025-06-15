@@ -4,6 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A collection of mini games built with HTML5 Canvas">
+    <meta name="keywords" content="mini games, canvas, HTML5, JavaScript">
+    <meta name="author" content="Rafael Mori">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <title>Mini Games Canvas</title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
@@ -18,23 +22,26 @@
   </div>
 
   <div class="main-layout">
-
     <div class="game-container">
-      <canvas id="placeholder" class="game-canvas hidden"></canvas>
-      <canvas id="pong" class="game-canvas"></canvas>
-      <canvas id="snake" class="game-canvas hidden"></canvas>
-      <canvas id="tictactoe" class="game-canvas hidden"></canvas>
+      <canvas id="pong" class="game-canvas active"></canvas>
+      <canvas id="snake" class="game-canvas"></canvas>
+      <canvas id="tictactoe" class="game-canvas"></canvas>
     </div>
 
-    <div class="sidebar">
+    <aside class="sidebar">
       <div class="game-controls">
         <div id="record">High Score: 0</div>
         <div id="score">Score: 0</div>
+        <label for="pong-difficulty">Dificuldade:</label>
+        <select id="pong-difficulty">
+          <option value="easy">Fácil</option>
+          <option value="medium" selected>Médio</option>
+          <option value="hard">Difícil</option>
+        </select>
         <button id="restart">Restart</button>
         <button id="stop">Stop</button>
         <button id="start">Start</button>
       </div>
-
       <div class="game-info">
         <p>Use the arrow keys to play.</p>
         <p>Press "R" to restart the game.</p>
@@ -46,7 +53,7 @@
         <p>Press "F5" to reload the page.</p>
         <p>Press "H" to hide/show this menu.</p>
       </div>
-    </div>
+    </aside>
   </div>
 
   <script src="assets/js/pong.js"></script>
